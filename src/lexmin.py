@@ -6,12 +6,101 @@ A Priori Lexicographical Multi-Objective Optimization. 🍎🐮
 Written by Alec Jacobson and Zachary Ferguson.
 """
 
+import pdb
+
 import itertools
 
 import numpy
 import scipy.sparse
 
 from affine_null_space import affine_null_space
+
+
+def LagrangeMultiplierMethod(H, f):
+    """
+    LEXMIN Solve the multi-objective minimization problem:
+
+        min  {E1(x), E2(x), ... , Ek(x)}
+         x
+
+    where
+
+        Ei = 0.5 * x.T * H[i] * x + x.T * f[i]
+
+    and Ei is deemed "more important" than Ei+1 (lexicographical ordering):
+    https://en.wikipedia.org/wiki/Multi-objective_optimization#A_priori_methods
+
+    Inputs:
+        H - k-cell list of n by n sparse matrices, so that H[i] contains the
+            quadratic coefficients of the ith energy.
+        f - k-cell list of n by 1 vectors, so that f[i] contains the linear
+            coefficients of the ith energy
+    Outputs:
+        Z - n by 1 solution vector
+    Note:
+        This method is bad for multiple reasons:
+            1. qr factorization on the ith set of constraints will be very
+               expensive,
+            2. this is due to the fact that the number of non-zeros will be
+               O(n2^i), and
+            3. the eventual solve will not necessarily behave well because the
+               constraints are not full rank (!duh!).
+    """
+
+    if(scipy.sparse.issparse(H[0])):
+        raise Exception()
+
+    k = len(H)
+    n = H[0].shape[0]
+
+    # C = H{1};
+    C = H[0]
+    # D = -f{1};
+    D = f[0]
+
+    # for i = 1:k
+    for i in range(k):
+        # [Q,R,E] = qr(C');
+        # Q, R, E = scipy.linalg.qr(C.T, pivoting=True)
+        # # nc = find(any(R,2),1,'last');
+        # nonzero_rows = R.nonzero()[0]
+        # if(nonzero_rows.shape[0] > 0):
+        #     nc = nonzero_rows[-1] + 1
+        # else:
+        #     nc = 0
+        nc = numpy.linalg.matrix_rank(C.T)
+        pdb.set_trace()
+        # if nc == size(C,1) || i==k
+        if nc == C.shape[0] or i == (k - 1):
+            # Z = C \ D;
+            # Z = Z(1:n);
+            # break;
+            return numpy.linalg.solve(C, D)[:n]
+
+        #######################################################################
+        #   min               ½x'Hix + x'fi + 0*λ₁ + 0*λ₂ + ... + 0*λi-1
+        #    x,λ₁,λ₂,...λi-1
+        #    s.t.             Ci-1 * [x; λ₁; λ₂; ...; λi=1] = Di-1
+        # or
+        #   min           ½[x;λ₁;...;λi-1]'A[x;λ₁;...;λi-1] - [x;λ₁;...;λi-1]'B
+        #    x,λ₁,λ₂,...λi-1                                    ^
+        #                                                 |------------negative
+        #   s.t.              Ci-1 * [x; λ₁; λ₂; ...; λi-1] = Di-1
+        #######################################################################
+
+        # A = sparse(size(C,1),size(C,1));
+        A = numpy.zeros((C.shape[0], C.shape[0]))
+        # A(1:n,1:n) = H{i+1};
+        A[:n, :n] = H[i + 1]
+        # B = zeros(size(C,1),1);
+        B = numpy.zeros((C.shape[0], 1))
+        # B(1:n) = -f{i+1};
+        B[:n] = -f[i + 1]
+        # C = [A C';C sparse(size(C,2),size(C,2))];
+        C = numpy.vstack([numpy.hstack([A, C.T]),
+            numpy.hstack([C, numpy.zeros((C.shape[1], C.shape[1]))])])
+        # D = [B;D];
+        D = numpy.vstack([B, D])
 
 
 def NullSpaceMethod(H, f, method="qr", bounds=None):
@@ -122,9 +211,9 @@ if __name__ == "__main__":
 
     fstr = "%s:\n%s\n\n"
     print(("Inputs:\n\n" + 4 * fstr) % ("A", A.A, "b", b, "C", C.A, "d", d))
-    # Z, E = NullSpaceMethod([A, C], [b, d])
-    Z = NullSpaceMethod([A], [b])
-    print(("Outputs:\n\n" + 2 * fstr) % ("Z", Z, "E", E))
+    Z = NullSpaceMethod([A, C], [-b, -d])
+    Z = LagrangeMultiplierMethod([A.A, C.A], [b, d])
+    print(("Outputs:\n\n" + fstr) % ("Z", Z))
 
-    print(Z.T.dot(A.dot(Z)) + Z.T.dot(b))
-    print(Z.T.dot(C.dot(Z)) + Z.T.dot(d))
+    print("Z.T @ A @ Z - Z.T @ b = %f" % (Z.T.dot(A.dot(Z)) - Z.T.dot(b)))
+    print("Z.T @ C @ Z - Z.T @ d = %f" % (Z.T.dot(C.dot(Z)) - Z.T.dot(d)))
