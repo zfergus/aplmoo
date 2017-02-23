@@ -25,7 +25,7 @@ d_0 = f_0
 C_{i+1} =
 \begin{bmatrix}
 {H_{i+1}} & C_i^T \\  
-C_i         & 0
+C_i       & 0
 \end{bmatrix}
 \end{equation}
 \begin{equation}
@@ -56,6 +56,7 @@ H_1^T & H_0^T & 0     & 0    \\
 H_0   & 0     & 0     & 0    \\
 \end{bmatrix}
 \end{equation}
+where each $H_i$ and $0$ are $n \times n$ matrices
 \begin{equation}
 C_2 =
 \begin{bmatrix}
@@ -65,6 +66,7 @@ C_2 =
 {f_{0}} \\
 \end{bmatrix}
 \end{equation}
+where each $f_i$ and $0$ are $n \times 1$ vectors.
 
 On the fourth iteration we have the following
 
@@ -94,3 +96,6 @@ C_3 =
 {f_{0}} \\
 \end{bmatrix}
 \end{equation}
+
+As can been seen the $C$ matrix doubles in size each iteration. The size of
+$C_i$ is $(n2^i) \times (n2^i)$.
