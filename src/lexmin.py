@@ -61,44 +61,51 @@ def LagrangeMultiplierMethod(H, f):
     # for i = 1:k
     for i in range(k):
         # [Q,R,E] = qr(C');
-        # Q, R, E = scipy.linalg.qr(C.T, pivoting=True)
-        # # nc = find(any(R,2),1,'last');
-        # nonzero_rows = R.nonzero()[0]
-        # if(nonzero_rows.shape[0] > 0):
-        #     nc = nonzero_rows[-1] + 1
-        # else:
-        #     nc = 0
-        nc = numpy.linalg.matrix_rank(C.T)
-        pdb.set_trace()
+        Q, R, E = scipy.linalg.qr(C.T, pivoting=True)
+        # nc = find(any(R,2),1,'last');
+        nonzero_rows = R.nonzero()[0]
+        if(nonzero_rows.shape[0] > 0):
+            nc = nonzero_rows[-1] + 1
+        else:
+            nc = 0
         # if nc == size(C,1) || i==k
-        if nc == C.shape[0] or i == (k - 1):
+        if nc == C.shape[0]:
             # Z = C \ D;
             # Z = Z(1:n);
-            # break;
+            pdb.set_trace()
             return numpy.linalg.solve(C, D)[:n]
+        else:
+            # col(Q) = col(A.T) = row(A)
+            m = C.shape[0]
+            if(i == (k - 1)):
+                pdb.set_trace()
+                C = Q[:nc, :nc].T
+                C = (Q[:nc, :nc].dot(R[:nc, :nc])).T
+                D = D[E[:nc]]
+                return numpy.linalg.solve(C, D)[:n]
 
         #######################################################################
         #   min               ½x'Hix + x'fi + 0*λ₁ + 0*λ₂ + ... + 0*λi-1
         #    x,λ₁,λ₂,...λi-1
-        #    s.t.             Ci-1 * [x; λ₁; λ₂; ...; λi=1] = Di-1
+        #    s.t.             Ci-1 * [x; λ₁; λ₂; ...; λi-1] = Di-1
         # or
         #   min           ½[x;λ₁;...;λi-1]'A[x;λ₁;...;λi-1] - [x;λ₁;...;λi-1]'B
-        #    x,λ₁,λ₂,...λi-1                                    ^
-        #                                                 |------------negative
+        #    x,λ₁,λ₂,...λi-1                                ^
+        #                                                   |----------negative
         #   s.t.              Ci-1 * [x; λ₁; λ₂; ...; λi-1] = Di-1
         #######################################################################
 
         # A = sparse(size(C,1),size(C,1));
-        A = numpy.zeros((C.shape[0], C.shape[0]))
+        A = numpy.zeros((m, m))
         # A(1:n,1:n) = H{i+1};
         A[:n, :n] = H[i + 1]
         # B = zeros(size(C,1),1);
-        B = numpy.zeros((C.shape[0], 1))
+        B = numpy.zeros((m, D.shape[1]))
         # B(1:n) = -f{i+1};
         B[:n] = -f[i + 1]
         # C = [A C';C sparse(size(C,2),size(C,2))];
         C = numpy.vstack([numpy.hstack([A, C.T]),
-            numpy.hstack([C, numpy.zeros((C.shape[1], C.shape[1]))])])
+            numpy.hstack([C, numpy.zeros((C.shape[0], C.shape[0]))])])
         # D = [B;D];
         D = numpy.vstack([B, D])
 
@@ -194,26 +201,31 @@ if __name__ == "__main__":
 
     # Generate a singular matrix
     data = (9 * numpy.random.rand(n, n)).astype("int32")
-    data[-n // 10, :] = 0 # sum(data[:-1, :])
     # Make sure the data matrix is singular
-    assert abs(numpy.linalg.det(data)) < 1e-8
+    # assert abs(numpy.linalg.det(data)) < 1e-8
     # Convert to a sparse version
     A = scipy.sparse.csc_matrix(data)
+    A[-3:] = 0
+    B = scipy.sparse.csc_matrix(data)
+    B[-1] = 0
 
     # Generate a b that will always have a solution
-    b = A.dot(numpy.ones((n, 1)))
+    a = A.dot(numpy.ones((n, 1)))
+    b = B.dot(numpy.ones((n, 1)))
 
-    C = scipy.sparse.identity(n)
-    d = 0.2053202792 * numpy.ones((n, 1))
+    C = scipy.sparse.identity(n).tocsc()
+    c = 0.2053202792 * numpy.ones((n, 1))
 
     print("The following inputs define our quadratic energies:")
     print("\tx.T*A*x + x.T*b = 0\n")
 
     fstr = "%s:\n%s\n\n"
-    print(("Inputs:\n\n" + 4 * fstr) % ("A", A.A, "b", b, "C", C.A, "d", d))
-    Z = NullSpaceMethod([A, C], [-b, -d])
-    Z = LagrangeMultiplierMethod([A.A, C.A], [b, d])
+    print(("Inputs:\n\n" + 4 * fstr) % ("A", A.A, "b", b, "C", C.A, "c", c))
+    Z = NullSpaceMethod([A, B, C], [-a, -b, -c])
+    Z = LagrangeMultiplierMethod([A.A, C.A], [a, c])
+    Z = LagrangeMultiplierMethod([A.A, B.A, C.A], [a, b, c])
     print(("Outputs:\n\n" + fstr) % ("Z", Z))
 
-    print("Z.T @ A @ Z - Z.T @ b = %f" % (Z.T.dot(A.dot(Z)) - Z.T.dot(b)))
-    print("Z.T @ C @ Z - Z.T @ d = %f" % (Z.T.dot(C.dot(Z)) - Z.T.dot(d)))
+    print("Z.T @ A @ Z - Z.T @ a = %f" % abs(Z.T.dot(A.dot(Z)) - Z.T.dot(a)))
+    print("Z.T @ B @ Z - Z.T @ b = %f" % abs(Z.T.dot(B.dot(Z)) - Z.T.dot(b)))
+    print("Z.T @ C @ Z - Z.T @ c = %f" % abs(Z.T.dot(C.dot(Z)) - Z.T.dot(c)))
