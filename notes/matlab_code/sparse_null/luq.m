@@ -1,6 +1,6 @@
 function [L,U,Q] = luq(A,do_pivot,tol)
 %  PURPOSE: calculates the following decomposition
-%             
+%
 %       A = L |Ubar  0 | Q
 %             |0     0 |
 %
@@ -9,7 +9,7 @@ function [L,U,Q] = luq(A,do_pivot,tol)
 %
 % ---------------------------------------------------
 %  USAGE: [L,U,Q] = luq(A,do_pivot,tol)
-%  INPUT: 
+%  INPUT:
 %         A             a sparse matrix
 %         do_pivot      = 1 with column pivoting
 %                       = 0 without column pivoting
@@ -44,19 +44,19 @@ if size(A,1)==0
 end
 if size(A,2)==0
     L                   = speye(n);
-    U                   = A;    
+    U                   = A;
     Q                   = speye(m);
     return;
-end        
+end
 
 %--------------------------------------------------------------------------
 %       LU DECOMPOSITION
 %--------------------------------------------------------------------------
 if do_pivot
-    [L,U,P,Q]           = lu(A);   
+    [L,U,P,Q]           = lu(A);
     Q                   = Q';
 else
-    [L,U,P]             = lu(A);   
+    [L,U,P]             = lu(A);
     Q                   = speye(m);
 end
 p                       = size(A,1)-size(L,2);
@@ -96,7 +96,7 @@ if ~isempty(I)
     Lbar1               = Lbar1+L(:,Jl)*X';
 
     X                   = Ubar1\Utmp;
-    Qbar1               = Qbar1+X*Q(Jq,:);    
+    Qbar1               = Qbar1+X*Q(Jq,:);
     Utmp                = [];
     X                   = [];
 end

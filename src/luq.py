@@ -64,21 +64,20 @@ def luq(A, do_pivot, tol = 1e-8):
     L = LUDecomp.L
     U = LUDecomp.U
     P = scipy.sparse.csr_matrix((n, n))
-    P[numpy.arange(m), LUDecomp.perm_r] = 1
+    P[numpy.arange(m), LUDecomp.perm_r] = 1 # Construct a Permutation matrix
     if do_pivot:
         Q = scipy.sparse.csr_matrix((m, m))
         Q[numpy.arange(m), LUDecomp.perm_c] = 1
-        Q = Q.T if do_pivot else scipy.sparse.identity(m)
+        Q = Q.T
     else:
         Q = scipy.sparse.identity(m)
 
     # import pdb; pdb.set_trace()
     p  = n - L.shape[1]
-    LL = scipy.sparse.csc_matrix((n - p, p))
     if(p != 0):
-        LL = scipy.sparse.vstack([LL, scipy.sparse.identity(p).tocsc()])
-    L  = scipy.sparse.hstack([P.T.dot(L), P[(n - p):n, :].T])
-    if(p != 0):
+        LL = scipy.sparse.vstack([scipy.sparse.csc_matrix((n - p, p)),
+                                  scipy.sparse.identity(p).tocsc()])
+        L  = scipy.sparse.hstack([P.T.dot(L), P[(n - p):n, :].T])
         U  = scipy.sparse.vstack([U, scipy.sparse.csc_matrix((p, m))])
 
     ###########################################################################
