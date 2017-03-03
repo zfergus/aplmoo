@@ -70,17 +70,15 @@ def LagrangeMultiplierMethod(H, f):
         if nc == C.shape[0]:
             # Z = C \ D;
             # Z = Z(1:n);
-            pdb.set_trace()
             return numpy.linalg.solve(C, D)[:n]
         else:
             # col(Q) = col(A.T) = row(A)
-            pdb.set_trace()
             m = C.shape[0]
+            C = (Q[:, :nc].dot(R[:nc, :nc])).T
+            D = D[E[:nc]]
             if(i == (k - 1)):
-                # pdb.set_trace()
                 C = Q[:nc, :nc].T
-                C = (Q[:nc, :nc].dot(R[:nc, :nc])).T
-                D = D[E[:nc]]
+                # pdb.set_trace()
                 return numpy.linalg.solve(C, D)[:n]
 
         # A = sparse(size(C,1),size(C,1));
@@ -101,15 +99,18 @@ if __name__ == "__main__":
     n = 100
 
     # Generate a singular matrix
-    data = (9 * numpy.random.rand(n, n)).astype("int32")
-    data2 = (9 * numpy.random.rand(n, n)).astype("int32")
+    numpy.random.seed(0)
+    data = (9 * numpy.random.rand(n // 2, n // 2)).astype("int32")
+    data2 = (9 * numpy.random.rand(n // 2, n // 2)).astype("int32")
     # Make sure the data matrix is singular
     # Convert to a sparse version
-    A = scipy.sparse.csc_matrix(data)
-    A[n // 2:] = 0
+    A = scipy.sparse.csc_matrix((n, n))
+    A[:n // 2, :n // 2] = data # Upper Left block matrix
+    A = A + A.T
     assert abs(numpy.linalg.det(A.A)) < 1e-8
-    B = scipy.sparse.csc_matrix(data2)
-    B[:n // 2] = 0
+    B = scipy.sparse.csc_matrix((n, n))
+    B[n // 2:, n // 2:] = data2 # Lower Right block matrix
+    B = B + B.T
     assert abs(numpy.linalg.det(B.A)) < 1e-8
 
     # Generate a b that will always have a solution
@@ -128,7 +129,7 @@ if __name__ == "__main__":
     print("Rank A = %d\nRank B = %d\n" % (numpy.linalg.matrix_rank(A.A),
         numpy.linalg.matrix_rank(B.A)))
     Z = LagrangeMultiplierMethod([A.A, C.A], [a, c])
-    # Z = LagrangeMultiplierMethod([A.A, B.A, C.A], [a, b, c])
+    Z = LagrangeMultiplierMethod([A.A, B.A, C.A], [a, b, c])
     print(("Outputs:\n\n" + fstr) % ("Z", Z))
 
     print("Z.T @ A @ Z - Z.T @ a = %f" % abs(Z.T.dot(A.dot(Z)) - Z.T.dot(a)))
