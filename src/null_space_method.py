@@ -102,38 +102,5 @@ def NullSpaceMethod(H, f, method="qr", bounds=None):
     return Z
 
 if __name__ == "__main__":
-    n = 100
-
-    # Generate a singular matrix
-    data = (9 * numpy.random.rand(n, n)).astype("int32")
-    data2 = (9 * numpy.random.rand(n, n)).astype("int32")
-    # Make sure the data matrix is singular
-    # Convert to a sparse version
-    A = scipy.sparse.csc_matrix(data)
-    A[n // 2:] = 0
-    assert abs(numpy.linalg.det(A.A)) < 1e-8
-    B = scipy.sparse.csc_matrix(data2)
-    B[:n // 2] = 0
-    assert abs(numpy.linalg.det(B.A)) < 1e-8
-
-    # Generate a b that will always have a solution
-    a = A.dot(numpy.ones((n, 1)))
-    b = B.dot(numpy.ones((n, 1)))
-
-    C = scipy.sparse.identity(n).tocsc()
-    c = 0.2053202792 * numpy.ones((n, 1))
-
-    print("The following inputs define our quadratic energies:")
-    print("\tx.T*A*x + x.T*b = 0\n")
-
-    fstr = "%s:\n%s\n\n"
-    print(("Inputs:\n\n" + 6 * fstr) % ("A", A.A, "a", a, "B", B.A, "b", b,
-        "C", C.A, "c", c))
-    print("Rank A = %d\nRank B = %d\n" % (numpy.linalg.matrix_rank(A.A),
-        numpy.linalg.matrix_rank(B.A)))
-    Z = NullSpaceMethod([A, B, C], [-a, -b, -c])
-    print(("Outputs:\n\n" + fstr) % ("Z", Z))
-
-    print("Z.T @ A @ Z - Z.T @ a = %f" % abs(Z.T.dot(A.dot(Z)) - Z.T.dot(a)))
-    print("Z.T @ B @ Z - Z.T @ b = %f" % abs(Z.T.dot(B.dot(Z)) - Z.T.dot(b)))
-    print("Z.T @ C @ Z - Z.T @ c = %f" % abs(Z.T.dot(C.dot(Z)) - Z.T.dot(c)))
+    import time_aplmoo_method
+    time_aplmoo_method.time_aplmoo_method(NullSpaceMethod, print_energy=True)

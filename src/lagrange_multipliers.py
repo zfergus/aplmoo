@@ -12,6 +12,11 @@ import pdb
 import numpy
 import scipy.linalg
 import scipy.sparse
+import scipy.sparse.linalg
+
+import includes
+
+from spqr import qr as spqr
 
 
 def LagrangeMultiplierMethod(H, f):
@@ -45,31 +50,39 @@ def LagrangeMultiplierMethod(H, f):
                constraints are not full rank (!duh!).
     """
 
-    if(scipy.sparse.issparse(H[0])):
-        raise Exception()
+    is_sparse = scipy.sparse.issparse(H[0])
 
-    k = len(H)
+    k = len(H) # Number of energies
     n = H[0].shape[0]
 
     # C = H{1};
     C = H[0]
     # D = -f{1};
-    D = f[0]
+    D = -f[0]
 
     # for i = 1:k
     for i in range(k):
         # [Q,R,E] = qr(C');
-        Q, R, E = scipy.linalg.qr(C.T, pivoting=True)
+        if(is_sparse):
+            Q, R, E, rank = spqr(C.T)
+            Q = Q.tocsc()
+            R = R.tocsc()
+        else:
+            Q, R, E = scipy.linalg.qr(C.T, pivoting=True)
+
         # nc = find(any(R,2),1,'last');
         nonzero_rows = R.nonzero()[0]
         if(nonzero_rows.shape[0] > 0):
             nc = nonzero_rows[-1] + 1
         else:
             nc = 0
+
         # if nc == size(C,1) || i==k
         if nc == C.shape[0]:
             # Z = C \ D;
             # Z = Z(1:n);
+            if(is_sparse):
+                return scipy.sparse.linalg.spsolve(C.tocsc(), D)[:n]
             return numpy.linalg.solve(C, D)[:n]
         else:
             # col(Q) = col(A.T) = row(A)
@@ -78,60 +91,33 @@ def LagrangeMultiplierMethod(H, f):
             D = D[E[:nc]]
             if(i == (k - 1)):
                 C = Q[:nc, :nc].T
-                # pdb.set_trace()
+                if(is_sparse):
+                    return scipy.sparse.linalg.spsolve(C.tocsc(), D)[:n]
                 return numpy.linalg.solve(C, D)[:n]
 
         # A = sparse(size(C,1),size(C,1));
-        A = numpy.zeros((m, m))
         # A(1:n,1:n) = H{i+1};
-        A[:H[i + 1].shape[0], :H[i + 1].shape[1]] = H[i + 1]
+        # C = [A C';C sparse(size(C,2),size(C,2))];
+        if(is_sparse):
+            A = scipy.sparse.lil_matrix((m, m))
+            A[:H[i + 1].shape[0], :H[i + 1].shape[1]] = H[i + 1]
+            C = scipy.sparse.vstack([scipy.sparse.hstack([A, C.T]),
+                scipy.sparse.hstack([C,
+                    scipy.sparse.csc_matrix((C.shape[0], C.shape[0]))])])
+        else:
+            A = numpy.zeros((m, m))
+            A[:H[i + 1].shape[0], :H[i + 1].shape[1]] = H[i + 1]
+            C = numpy.vstack([numpy.hstack([A, C.T]),
+                numpy.hstack([C, numpy.zeros((C.shape[0], C.shape[0]))])])
+
         # B = zeros(size(C,1),1);
         B = numpy.zeros((m, D.shape[1]))
         # B(1:n) = -f{i+1};
         B[:f[i + 1].shape[0]] = -f[i + 1]
-        # C = [A C';C sparse(size(C,2),size(C,2))];
-        C = numpy.vstack([numpy.hstack([A, C.T]),
-            numpy.hstack([C, numpy.zeros((C.shape[0], C.shape[0]))])])
         # D = [B;D];
         D = numpy.vstack([B, D])
 
 if __name__ == "__main__":
-    n = 100
-
-    # Generate a singular matrix
-    numpy.random.seed(0)
-    data = (9 * numpy.random.rand(n // 2, n // 2)).astype("int32")
-    data2 = (9 * numpy.random.rand(n // 2, n // 2)).astype("int32")
-    # Make sure the data matrix is singular
-    # Convert to a sparse version
-    A = scipy.sparse.csc_matrix((n, n))
-    A[:n // 2, :n // 2] = data # Upper Left block matrix
-    A = A + A.T
-    assert abs(numpy.linalg.det(A.A)) < 1e-8
-    B = scipy.sparse.csc_matrix((n, n))
-    B[n // 2:, n // 2:] = data2 # Lower Right block matrix
-    B = B + B.T
-    assert abs(numpy.linalg.det(B.A)) < 1e-8
-
-    # Generate a b that will always have a solution
-    a = A.dot(numpy.ones((n, 1)))
-    b = B.dot(numpy.ones((n, 1)))
-
-    C = scipy.sparse.identity(n).tocsc()
-    c = 0.2053202792 * numpy.ones((n, 1))
-
-    print("The following inputs define our quadratic energies:")
-    print("\tx.T*A*x + x.T*b = 0\n")
-
-    fstr = "%s:\n%s\n\n"
-    print(("Inputs:\n\n" + 6 * fstr) % ("A", A.A, "a", a, "B", B.A, "b", b,
-        "C", C.A, "c", c))
-    print("Rank A = %d\nRank B = %d\n" % (numpy.linalg.matrix_rank(A.A),
-        numpy.linalg.matrix_rank(B.A)))
-    Z = LagrangeMultiplierMethod([A.A, C.A], [a, c])
-    Z = LagrangeMultiplierMethod([A.A, B.A, C.A], [a, b, c])
-    print(("Outputs:\n\n" + fstr) % ("Z", Z))
-
-    print("Z.T @ A @ Z - Z.T @ a = %f" % abs(Z.T.dot(A.dot(Z)) - Z.T.dot(a)))
-    print("Z.T @ B @ Z - Z.T @ b = %f" % abs(Z.T.dot(B.dot(Z)) - Z.T.dot(b)))
-    print("Z.T @ C @ Z - Z.T @ c = %f" % abs(Z.T.dot(C.dot(Z)) - Z.T.dot(c)))
+    import time_aplmoo_method
+    time_aplmoo_method.time_aplmoo_method(LagrangeMultiplierMethod,
+        print_energy=True)

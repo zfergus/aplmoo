@@ -193,7 +193,7 @@ def affine_null_space(A, b, tolerance = 1e-8, method = "qr", bounds = None):
       x0 - #A by #b, so that columns are feasible solutions
     """
     # TODO REMOVE THIS
-    print(A.shape)
+    # print(A.shape)
 
     # Dense matrices -> use dense version
     if(not scipy.sparse.issparse(A)):
