@@ -39,8 +39,35 @@ d_i
 Where $H_{i+1}$ is padded by zeros to match the size of $C_i$, and
 $f_{i+1}$ is padded by zeros to match the size of $d_i$.
 
-When there are no more Energies or $C_i$ is full-rank the equation
-$C\vec{z} = \vec{d}$ is solved. The final solution is the first n elements of
+If $C_{i+1}$ is full rank we solve the equation $C_{i+1}\vec{z} = \vec{d}_{i+1}$
+The final solution is the first n elements of $\vec{z}$. Otherwise we then find
+the row space of $C_{i+1}$ and use that as $C_{i+1}$. To find the row space of
+$C_{i+1}$ we preform QR decomposition on $C_{i+1}^T$.
+
+\begin{equation}
+PC_{i+1}^T = QR
+\end{equation}
+\begin{equation}
+row(C_{i+1}) = col(C_{i+1}^T) = col(Q)
+\end{equation}
+
+From this QR decomposition we can find the rank of $C_{i+1}$,
+$r = rank(C_{i+1})$, which is the index of the first row of all zeros in $Q$.
+The column space of $Q$ is spanned by the first $r$ columns of Q.
+
+\begin{equation}
+C_{i+1} \leftarrow (Q_{:, 1:r}R_{1:r, 1:r})^T \\ \\
+\end{equation}
+
+Then we shrink $d_{i+1}$ to include only the rows corresponding to the row
+space of $C_{i+1}$
+
+\begin{equation}
+d_{i+1} = (Pd)_{:rx}
+\end{equation}
+
+If there are no more Energies we solve the equation
+$C_{i+1}\vec{z} = \vec{d}_{i+1}$. The final solution is the first n elements of
 $\vec{z}$.
 
 \begin{equation}
@@ -122,6 +149,3 @@ $C_i$ is $(n2^i) \times (n2^i)$.
 
 QR factorization on the i<sup>th</sup> set of constraints will be very
 expensive because the number of non-zeros will be $O(n2^i)$.
-
-The eventual solve will not necessarily behave well because the constraints
-are not full rank.

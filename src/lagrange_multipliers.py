@@ -39,7 +39,7 @@ def LagrangeMultiplierMethod(H, f):
         f - k-cell list of n by 1 vectors, so that f[i] contains the linear
             coefficients of the ith energy
     Outputs:
-        Z - n by 1 solution vector
+        z - n by 1 solution vector
     Note:
         This method is bad for multiple reasons:
             1. qr factorization on the ith set of constraints will be very
@@ -58,7 +58,7 @@ def LagrangeMultiplierMethod(H, f):
     # C = H{1};
     C = H[0]
     # D = -f{1};
-    D = -f[0]
+    d = -f[0]
 
     # for i = 1:k
     for i in range(k):
@@ -81,19 +81,23 @@ def LagrangeMultiplierMethod(H, f):
         if nc == C.shape[0]:
             # Z = C \ D;
             # Z = Z(1:n);
-            if(is_sparse):
-                return scipy.sparse.linalg.spsolve(C.tocsc(), D)[:n]
-            return numpy.linalg.solve(C, D)[:n]
-        else:
-            # col(Q) = col(A.T) = row(A)
-            m = C.shape[0]
-            C = (Q[:, :nc].dot(R[:nc, :nc])).T
-            D = D[E[:nc]]
-            if(i == (k - 1)):
-                C = Q[:nc, :nc].T
-                if(is_sparse):
-                    return scipy.sparse.linalg.spsolve(C.tocsc(), D)[:n]
-                return numpy.linalg.solve(C, D)[:n]
+            return (scipy.sparse.linalg.spsolve(C.tocsc(), d)[:n] if is_sparse
+                else numpy.linalg.solve(C, d)[:n])
+        elif(k == 1):
+            C = (Q[:nc, :nc].dot(R[:nc, :nc])).T
+            d = d[E[:nc]]
+            z = numpy.zeros(n)
+            z[:nc] = (scipy.sparse.linalg.spsolve(C.tocsc(), d) if is_sparse
+                else numpy.linalg.solve(C, d))
+            return z
+
+        # col(Q) = col(C.T) = row(C)
+        m = C.shape[0]
+        C = (Q[:, :nc].dot(R[:nc, :nc])).T
+        d = d[E[:nc]]
+        if(i == (k - 1)):
+            return (scipy.sparse.linalg.spsolve(C.tocsc(), d)[:n] if is_sparse
+                else numpy.linalg.solve(C, d)[:n])
 
         # A = sparse(size(C,1),size(C,1));
         # A(1:n,1:n) = H{i+1};
@@ -111,11 +115,11 @@ def LagrangeMultiplierMethod(H, f):
                 numpy.hstack([C, numpy.zeros((C.shape[0], C.shape[0]))])])
 
         # B = zeros(size(C,1),1);
-        B = numpy.zeros((m, D.shape[1]))
+        B = numpy.zeros((m, d.shape[1]))
         # B(1:n) = -f{i+1};
         B[:f[i + 1].shape[0]] = -f[i + 1]
         # D = [B;D];
-        D = numpy.vstack([B, D])
+        d = numpy.vstack([B, d])
 
 if __name__ == "__main__":
     import time_aplmoo_method

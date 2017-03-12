@@ -26,7 +26,7 @@ def time_aplmoo_method(method, irange=None, print_energy=False):
     if(irange is None):
         irange = range(1, 11)
 
-    print("   n        t")
+    print("%4s %8s" % ("n", "t"))
 
     energies = []
     for i in irange:
