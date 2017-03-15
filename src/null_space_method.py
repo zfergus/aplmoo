@@ -67,28 +67,29 @@ def NullSpaceMethod(H, f, method="qr", bounds=None):
         Hi = N.T.dot(Hi.dot(N))
 
         # Sparse QR Factorization
-        # [Ni,Y] = affine_null_space(Hi,-fi,'Method',null_space_method)
+        # [Ni, xi] = affine_null_space(Hi,-fi,'Method',null_space_method)
         # Ni is the null space of Hi
-        # Y is a solution to Hi * x = fi
-        Ni, Y = affine_null_space(Hi, -fi, method=method, bounds=bounds)
+        # xi is a particular solution to Hi * x = fi
+        Ni, xi = affine_null_space(Hi, -fi, method=method, bounds=bounds)
 
-        if(len(Y.shape) < 2):
-            Y = Y.reshape(-1, 1)
+        if(len(xi.shape) < 2):
+            xi = xi.reshape(-1, 1)
 
         # Update feasible solution
-        Z = N.dot(Y) + Z
-        if(Ni.shape[1] == 0):
-            # Z is full determined, exit loop early
-            break
+        Z = N.dot(xi) + Z
 
+        # If Z is fully determined, exit loop early
+        if(Ni.shape[1] == 0):
+            break
         # Otherwise, N spans the null space of Hi
         N = N.dot(Ni)
 
         # Update the bounds
+        # TODO: Solve for the bounds
         if not (bounds is None):
-            # bounds = (-Z, 1-Z)
-            val = N.dot(numpy.zeros(N.shape[1])).reshape(-1, 1)
-            bounds = (-val, 1 - val)
+            # bounds = (0 - x0 - x1 - ... - xi, 1 - x0 - x1 - ... - xi)
+            bounds[0] -= xi
+            bounds[1] -= xi
 
     # (If i<k then) the feasible solution Z is now the unique solution.
 

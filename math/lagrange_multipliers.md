@@ -12,7 +12,7 @@ E_i = 0.5 x^T H_i x + x^T f_i
 
 and $E_i$ is deemed "more important" than $E_{i+1}$ (lexicographical ordering).
 
-## Formulation
+## Algorithm
 
 \begin{equation}
 C_0 = H_0
@@ -56,7 +56,7 @@ $r = rank(C_{i+1})$, which is the index of the first row of all zeros in $Q$.
 The column space of $Q$ is spanned by the first $r$ columns of Q.
 
 \begin{equation}
-C_{i+1} \leftarrow (Q_{:, 1:r}R_{1:r, 1:r})^T \\ \\
+C_{i+1} \leftarrow (Q_{:, :r}R_{:r, :r})^T \\ \\
 \end{equation}
 
 Then we shrink $d_{i+1}$ to include only the rows corresponding to the row

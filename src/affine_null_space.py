@@ -75,10 +75,10 @@ def dense_affine_null_space(A, b, tolerance = 1e-8, method = "qr"):
     elif(method == "svd"):
         U, s, VT = numpy.linalg.svd(A)
         V = VT.T
-        singular_i = (s < 1e-15).nonzero()[0]
+        singular_i = (s < tolerance).nonzero()[0]
         N = V[:, singular_i]
         pseudo_invert = numpy.vectorize(lambda x: (1 / float(x))
-            if abs(x) > 1e-8 else 0.0)
+            if abs(x) > tolerance else 0.0)
         S_plus = numpy.diag(pseudo_invert(s))
         x0 = V.dot(S_plus).dot(U.T).dot(b)
 
