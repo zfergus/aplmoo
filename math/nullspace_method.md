@@ -106,14 +106,15 @@ z_0 = 0
 \end{equation}
 
 \begin{equation}
-\bar{N_i}, x_i = \text{$AffineNullSpace$}(N_{i-1}^TH_iN_{i-1}, \ N_i^T(H_iz_i+f_i))
+\bar{N_i}, x_i = \text{$AffineNullSpace$}(N_{i-1}^TH_iN_{i-1}, \
+-N_{i-1}^T(H_iz_{i-1}+f_i))
 \end{equation}
 
 \begin{equation}
-z_{i+1} = N_ix_i + z_i
+z_i = N_{i-1}x_i + z_{i-1}
 \end{equation}
 \begin{equation}
-N_{i+1} = N_i \bar{N_{i}}
+N_i = N_{i-1} \bar{N_{i}}
 \end{equation}
 
 Where `AffineNullSpace` is one of the functions defined in section one. We
@@ -124,20 +125,68 @@ For example,
 
 \begin{equation}
 \begin{matrix}
-\bar{N_0}, x_0 = AffineNullSpace(H_0, \ f_0) \\
-z_1 = x_0 \\
-N_1 = \bar{N_0} \\
+\bar{N_1}, x_1 = AffineNullSpace(H_1, \ -f_1) \\
+z_1 = Ix_1 + 0 = x_1 \\
+N_1 = I\bar{N_1} = \bar{N_1} \\
 \\
-\bar{N_1}, x_1 = AffineNullSpace(\bar{N_0^T}H_1\Bar{N_0}, \bar{N_0^T}(H_1x_0 + f_1)) \\
-z_2 = N_1 x_1 + z_1 = \bar{N_0}x_1 + x_0 \\
-N_2 = N_1\bar{N_1} = \bar{N_0}\bar{N_1} \\
+\bar{N_2}, x_2 = AffineNullSpace(N_1H_2N_1, \ -N_1^T(H_2z_1 + f_2)) \\
+z_2 = N_1 x_2 + z_1 = \bar{N_1}x_2 + x_1 \\
+N_2 = N_1\bar{N_2} = \bar{N_1}\bar{N_2} \\
 \\
-\bar{N_2}, x_2 = AffineNullSpace(...) \\
-z_3 = N_2 x_2 + z_2 = \bar{N_0}\bar{N_1}x_2 + \bar{N_0}x_1 + x_0 \\
-N_3 = N_2\bar{N_2} = \bar{N_0}\bar{N_1}\bar{N_2} \\
+\bar{N_3}, x_3 = AffineNullSpace(N_2H_3N_2, \ -N_2^T(H_3z_2 + f_3)) \\
+z_3 = N_2 x_3 + z_2 = \bar{N_1}\bar{N_2}x_3 + \bar{N_1}x_2 + x_1 \\
+N_3 = N_2\bar{N_3} = \bar{N_1}\bar{N_2}\bar{N_3} \\
 \end{matrix}
 \end{equation}
 
 With each iteration we find a minimum solution for the current energy.
 Importantly, this new solution preserves the energy value of the previous
 solution for all preceding energies.
+
+### Proof
+
+$\left ( {d \over dx} E_1(x) \right ) = H_1x + f_1 = 0$
+
+$x_1$ is a particular solution to $H_1x = -f_1$ and a minimal energy solution
+to $E_1(x)$.
+
+$N_1y + x_1$ is a parameterization of all minimal energy solutions for $E_1(x)$.
+
+$H_1(N_1y + x_1) = H_1N_1y + H_1x_1 = 0 + H_1x_1 = -f_1$
+
+**Prove that $z_2$ is a minimal energy solution to $E_1(x)$:**
+
+$E_2(x) = {1 \over 2}x^TH_2x + x^Tf_2 + c_2$
+
+$E_2(N_1y + x_1) = {1 \over 2}(N_1y + x_1)^TH_2(N_1y + x_1) + (N_1y + x_1)^Tf_2 + c_2$
+
+$E_2(N_1y + x_1) = {1 \over 2}y^TN_1^TH_2N_1y + y^TN_1^TH_2x_1 + y^TN_1^Tf_2 + {1 \over 2}x_1^TH_2x_1 + x_1^Tf_2 + c_2$
+
+$\left ( {d \over dx} E_2(N_1y + x_1) \right ) = N_1^TH_2N_1y + N_1^T(H_2x_1 + f_2)$
+
+$x_2$ is a particular solution to $N_1^TH_2N_1y = -N_1^T(H_2x_1 + f_2)$
+
+$z_2 = N_1x_2 + x_1$
+
+$H_1z_2 = H_1N_1x_2 + H_1x_1 = -f_1$
+
+### Example
+
+To illustrate this better let us take two energies in 3D
+
+$E_1(x, y) = z = (y+7)^2$
+
+$E_2(x, y) = z = x^2 + y^2$
+
+The minimal solutions to $E_1$ can be paramaterized as
+$N_1\vec{w} + \vec{x_1} = \begin{bmatrix} 1 \\ 0 \end{bmatrix} \vec{w} + \begin{bmatrix} -7 \\ -7 \end{bmatrix}$.
+
+Substituting this parameterization for $(x, y)$ in $E_2$ we get the following:
+
+$E_2(x, y) = (w_0 - 7)^2 + (-7)^2 = w_0^2 - 14w_0 + 49 + 49$
+
+${d \over dw} E_2 = 2w_0 - 14 = 0 \Rightarrow w_0 = 7$
+
+$\therefore z_2 = N_1\begin{bmatrix} 7 \end{bmatrix} + z_1 = \begin{bmatrix} 0 \\ -7 \end{bmatrix}$
+
+$z_2$ is the minimal energy value for $E_2$ that is in the null space of $E_1$.
